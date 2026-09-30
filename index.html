@@ -238,6 +238,20 @@ h2 em{font-style:italic;color:var(--gold-soft)}
 .finale h1{font-size:clamp(46px,9vw,128px)}
 .thanks{font-family:'Playfair Display',serif;font-size:clamp(24px,3vw,40px);color:var(--gold);margin-top:12px;font-style:italic}
 
+/* ============ ПАСХАЛКА ============ */
+.egg{position:fixed;inset:0;z-index:120;display:flex;align-items:center;justify-content:center;
+  background:rgba(10,6,5,.96);opacity:0;visibility:hidden;transition:opacity .5s var(--ease),visibility 0s linear .5s}
+.egg.on{opacity:1;visibility:visible;transition-delay:0s}
+.egg video{max-width:92vw;max-height:84vh;border-radius:14px;background:#000;
+  box-shadow:0 40px 90px rgba(0,0,0,.75),0 0 0 3px var(--gold);animation:eggIn .6s var(--ease) both}
+@keyframes eggIn{from{opacity:0;transform:scale(.94) translateY(24px)}to{opacity:1;transform:none}}
+.egg-close{position:absolute;top:26px;right:30px;width:48px;height:48px;border-radius:50%;
+  border:1px solid rgba(232,184,75,.5);background:rgba(21,14,12,.85);color:var(--gold);
+  font-size:24px;line-height:1;cursor:pointer;transition:.35s var(--ease)}
+.egg-close:hover{background:var(--red);color:#fff;transform:rotate(90deg);border-color:var(--red)}
+.egg-cap{position:absolute;bottom:34px;left:0;right:0;text-align:center;font-size:11.5px;
+  letter-spacing:.3em;text-transform:uppercase;color:var(--gold);opacity:.85}
+
 /* ============ ИНТЕРФЕЙС ============ */
 .progress{position:fixed;top:0;left:0;height:3px;width:100%;z-index:70;background:rgba(244,236,221,.1)}
 .progress i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--red),var(--gold));box-shadow:0 0 14px rgba(232,184,75,.7);transition:width .7s var(--ease)}
@@ -589,6 +603,12 @@ h2 em{font-style:italic;color:var(--gold-soft)}
 
 </div>
 
+<div class="egg" id="egg">
+  <video id="eggVideo" src="assets/easter.mp4" playsinline preload="auto"></video>
+  <button class="egg-close" id="eggClose" title="Закрыть">×</button>
+  <div class="egg-cap">Пасхалка · нажми ещё раз, чтобы закрыть</div>
+</div>
+
 <div class="dots" id="dots"></div>
 <div class="hud">
   <div class="counter"><b id="cur">01</b> / <span id="total">15</span></div>
@@ -630,6 +650,7 @@ h2 em{font-style:italic;color:var(--gold-soft)}
 
   function go(n){
     n=Math.max(0,Math.min(total-1,n));
+    eggStreak=0;
     if(n===idx||busy)return;
     busy=true;
     var prevSlide=slides[idx];
@@ -643,8 +664,16 @@ h2 em{font-style:italic;color:var(--gold-soft)}
     setTimeout(function(){busy=false;},780);
   }
 
-  function next(){go(idx+1);}
-  function prev(){go(idx-1);}
+  var eggStreak=0;
+  function next(){
+    if(eggOn())return;
+    if(idx===total-1){
+      if(++eggStreak>=5){eggStreak=0;playEgg();}
+      return;
+    }
+    go(idx+1);
+  }
+  function prev(){ if(eggOn())return; go(idx-1); }
 
   document.getElementById('next').onclick=function(e){e.stopPropagation();next();};
   document.getElementById('prev').onclick=function(e){e.stopPropagation();prev();};
@@ -670,7 +699,8 @@ h2 em{font-style:italic;color:var(--gold-soft)}
   });
 
   document.addEventListener('click',function(e){
-    if(e.target.closest('button,a'))return;
+    if(e.target.closest('button,a,.egg'))return;
+    if(eggOn())return;
     (e.clientX>innerWidth/2?next:prev)();
   });
 
@@ -689,6 +719,21 @@ h2 em{font-style:italic;color:var(--gold-soft)}
     wheelLock=true;(e.deltaY>0?next:prev)();
     setTimeout(function(){wheelLock=false;},900);
   },{passive:true});
+
+  /* ---- пасхалка: 5 нажатий «вперёд» на последнем слайде ---- */
+  var eggEl=document.getElementById('egg'), eggV=document.getElementById('eggVideo');
+  function eggOn(){return eggEl.classList.contains('on');}
+  function playEgg(){
+    eggEl.classList.add('on');
+    try{eggV.currentTime=0;}catch(e){}
+    var pr=eggV.play(); if(pr&&pr.catch)pr.catch(function(){});
+  }
+  function closeEgg(){ if(!eggOn())return; eggEl.classList.remove('on'); try{eggV.pause();}catch(e){} }
+  eggV.addEventListener('timeupdate',function(){ if(eggV.currentTime>=11.95) closeEgg(); });
+  eggV.addEventListener('ended',closeEgg);
+  document.getElementById('eggClose').addEventListener('click',function(e){e.stopPropagation();closeEgg();});
+  eggEl.addEventListener('click',function(){closeEgg();});
+  document.addEventListener('keydown',function(e){ if(e.key==='Escape') closeEgg(); });
 
   var stars=document.getElementById('stars');
   for(var i=0;i<70;i++){
